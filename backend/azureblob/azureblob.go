@@ -538,13 +538,20 @@ func (f *Fs) list(dir string, recurse bool, maxResults uint, fn listFn) error {
 				continue
 			}
 			remote := file.Name[len(f.root):]
-			// Check for directory
-			isDirectory := strings.HasSuffix(remote, "/")
-			if isDirectory {
-				remote = remote[:len(remote)-1]
+			// is this a directory marker?
+			if (strings.HasSuffix(remote, "/") || remote == "") && *file.Properties.ContentLength == 0 {
+				if recurse && remote != "" {
+					// add a directory in if --fast-list since will have no prefixes
+					remote = remote[:len(remote)-1]
+					err = fn(remote, file, true)
+					if err != nil {
+						return err
+					}
+				}
+				continue // skip directory marker
 			}
 			// Send object
-			err = fn(remote, file, isDirectory)
+			err = fn(remote, file, false)
 			if err != nil {
 				return err
 			}
